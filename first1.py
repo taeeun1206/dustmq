@@ -2,31 +2,50 @@ import streamlit as st
 import pandas as pd
 
 # 제목
-st.title("2025년 5월 기준 연령별 인구 현황")
-st.write("상위 5개 행정구역의 연령별 인구수를 시각화한 결과입니다.")
+st.title("2025년 5월 기준 연령별 인구 현황 분석")
 
-# CSV 읽기
-df = pd.read_csv("202505_202505_연령별인구현황_월간.csv", encoding="euc-kr")
+# CSV 파일 업로드
+uploaded_file = st.file_uploader("CSV 파일을 업로드해주세요 (EUC-KR 인코딩)", type="csv")
 
-# 전처리
-df['총인구수'] = df['2025년05월_계_총인구수'].str.replace(',', '').astype(int)
+if uploaded_file:
+    # CSV 파일 읽기
+    df = pd.read_csv(uploaded_file, encoding='euc-kr')
 
-# 연령 관련 열 추출 및 이름 정리
-age_columns = [col for col in df.columns if col.startswith('2025년05월_계_') and '세' in col]
-age_column_mapping = {col: col.replace('2025년05월_계_', '') for col in age_columns}
-df = df.rename(columns=age_column_mapping)
+    st.subheader("원본 데이터 미리보기")
+    st.dataframe(df)
 
-# 분석용 데이터프레임 구성
-df_processed = df[['행정구역', '총인구수'] + list(age_column_mapping.values())]
+    # '행정구역' 컬럼 이름 자동 감지
+    region_col = [col for col in df.columns if '행정구역' in col][0]
 
-# 총인구수 기준 상위 5개 행정구역 추출
-top5 = df_processed.sort_values(by='총인구수', ascending=False).head(5)
-top5_age = top5.set_index('행정구역').drop(columns=['총인구수']).T  # 연령을 세로축으로
+    # 연령별 컬럼 필터링
+    age_columns = [col for col in df.columns if col.startswith("2025년05월_계_") and "세" in col]
 
-# 선 그래프 시각화
-st.subheader("상위 5개 행정구역의 연령별 인구 분포")
-st.line_chart(top5_age)
+    # 총인구수 컬럼 이름 감지
+    total_pop_col = [col for col in df.columns if "총인구수" in col][0]
 
-# 원본 데이터 출력
-st.subheader("원본 데이터 (전처리됨)")
-st.dataframe(df_processed)
+    # 연령 숫자만 추출한 새로운 열 이름 리스트
+    age_labels = [col.replace("2025년05월_계_", "").replace("세", "") for col in age_columns]
+
+    # 데이터프레임 복사 및 연령 컬럼만 추출
+    df_age = df[[region_col, total_pop_col] + age_columns].copy()
+
+    # 열 이름 바꾸기 (연령 숫자만)
+    rename_dict = dict(zip(age_columns, age_labels))
+    df_age.rename(columns=rename_dict, inplace=True)
+
+    # 총인구수 기준 상위 5개 지역 추출
+    df_top5 = df_age.sort_values(by=total_pop_col, ascending=False).head(5)
+
+    st.subheader("총인구수 기준 상위 5개 지역")
+    st.dataframe(df_top5[[region_col, total_pop_col]])
+
+    # 연령별 인구 데이터만 추출
+    age_only_cols = age_labels
+    df_plot = df_top5[[region_col] + age_only_cols].set_index(region_col).T
+
+    st.subheader("연령별 인구 선 그래프")
+    st.line_chart(df_plot)
+
+    st.caption("데이터 출처: 통계청")
+else:
+    st.info("왼쪽 사이드바에서 CSV 파일을 업로드해주세요.")

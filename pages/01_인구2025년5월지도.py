@@ -38,8 +38,9 @@ if uploaded_file:
     region_col = [col for col in df.columns if '행정구역' in col][0]
     total_pop_col = [col for col in df.columns if "총인구수" in col][0]
 
-    # 괄호 제거: "서울특별시(11)" → "서울특별시"
+    # 전처리: 괄호 제거 + 시·도만 추출
     df[region_col] = df[region_col].str.replace(r"\(.*\)", "", regex=True).str.strip()
+    df[region_col] = df[region_col].str.extract(r"^(\S+?[시도])")  # 예: '서울특별시 종로구' → '서울특별시'
 
     # 지도 생성
     m = folium.Map(location=[36.5, 127.5], zoom_start=7)
@@ -47,14 +48,15 @@ if uploaded_file:
     # 행정구역별 원 추가
     for _, row in df.iterrows():
         region = row[region_col]
-        pop = pd.to_numeric(row[total_pop_col], errors='coerce')
+        pop_raw = str(row[total_pop_col]).replace(",", "")
+        pop = pd.to_numeric(pop_raw, errors='coerce')
 
         if pd.notnull(pop) and region in region_coords:
             lat, lon = region_coords[region]
 
             folium.CircleMarker(
                 location=(lat, lon),
-                radius=max(5, min(pop / 50000, 30)),  # 인구수에 따라 크기 조절
+                radius=max(5, min(pop / 50000, 30)),
                 color='pink',
                 fill=True,
                 fill_color='pink',
@@ -62,10 +64,11 @@ if uploaded_file:
                 popup=f"{region} : {int(pop):,}명"
             ).add_to(m)
 
-    # 지도 표시
+    # 지도 출력
     st.subheader("행정구역별 인구 시각화 지도")
     st_data = st_folium(m, width=900, height=600)
 
     st.caption("※ 행정구역 중심 좌표 기준으로 원을 표시합니다. 정확한 행정 경계는 포함되지 않습니다.")
 else:
     st.info("CSV 파일을 업로드하면 인구 지도가 표시됩니다.")
+

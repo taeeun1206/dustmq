@@ -19,7 +19,6 @@ if uploaded_file:
 
     df_top5 = df_age.sort_values(by=total_pop_col, ascending=False).head(5)
 
-    # 탭 생성
     tab1, tab2 = st.tabs(["기본 분석", "지역 선택 분석"])
 
     with tab1:
@@ -29,7 +28,6 @@ if uploaded_file:
         st.subheader("총인구수 기준 상위 5개 지역")
         st.dataframe(df_top5[[region_col, total_pop_col]])
 
-        # 상위 5개 지역 연령별 인구 선 그래프
         age_only_cols = age_labels
         df_plot = df_top5[[region_col] + age_only_cols].copy()
         for col in age_only_cols:
@@ -61,15 +59,34 @@ if uploaded_file:
             st.dataframe(df_selected[[region_col, total_pop_col]].sort_values(by=total_pop_col, ascending=False))
 
             # 선택한 지역 연령별 인구 선 그래프
+            st.subheader("선택한 지역의 연령별 인구 선 그래프")
             df_plot2 = df_selected[[region_col] + age_only_cols].set_index(region_col).T
             df_plot2.index.name = '연령'
             df_plot2 = df_plot2[df_plot2.index.str.match(r'^\d+$')]
             df_plot2.index = df_plot2.index.astype(int)
             df_plot2 = df_plot2.sort_index()
             df_plot2 = df_plot2.fillna(0)
-
-            st.subheader("선택한 지역의 연령별 인구 선 그래프")
             st.line_chart(df_plot2)
+
+            # 연령대별 인구 합계 계산
+            age_bins = [0, 9, 19, 29, 39, 49, 59, 69, 79, 89, 99, 150]
+            age_labels_bins = ['10살 미만', '10대', '20대', '30대', '40대', '50대', '60대', '70대', '80대', '90대', '100대 이상']
+
+            age_data = df_selected[age_only_cols].copy()
+            age_data.columns = [int(col) for col in age_data.columns]
+
+            df_agegroup_sum = pd.DataFrame()
+            for idx, row in age_data.iterrows():
+                s = pd.Series(row.values, index=age_data.columns)
+                s = s.groupby(pd.cut(s.index, bins=age_bins, labels=age_labels_bins)).sum()
+                df_agegroup_sum = pd.concat([df_agegroup_sum, s], axis=1)
+
+            df_agegroup_sum = df_agegroup_sum.T
+            df_agegroup_sum.index = df_selected[region_col].values
+
+            st.subheader("선택한 지역의 연령대별 인구 합계")
+            st.dataframe(df_agegroup_sum)
+
         else:
             st.warning("하나 이상의 지역을 선택해주세요.")
 

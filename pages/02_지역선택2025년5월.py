@@ -56,6 +56,11 @@ if uploaded_file:
             for col in age_only_cols:
                 df_selected[col] = pd.to_numeric(df_selected[col], errors='coerce')
 
+            # 선택한 지역 총인구수 표
+            st.subheader("선택한 지역의 총인구수")
+            st.dataframe(df_selected[[region_col, total_pop_col]].sort_values(by=total_pop_col, ascending=False))
+
+            # 선택한 지역 연령별 인구 선 그래프
             df_plot2 = df_selected[[region_col] + age_only_cols].set_index(region_col).T
             df_plot2.index.name = '연령'
             df_plot2 = df_plot2[df_plot2.index.str.match(r'^\d+$')]

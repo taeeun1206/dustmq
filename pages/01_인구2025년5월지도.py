@@ -4,9 +4,9 @@ import folium
 from streamlit_folium import st_folium
 
 st.set_page_config(layout="wide")
-st.title("2025년 5월 기준 행정구역별 인구 지도")
+st.title("2025년 5월 기준 행정구역별 인구 지도 (핑크 원 시각화)")
 
-# 행정구역별 중심 좌표 (예시 일부)
+# 중심 좌표 (행정구역명 → 위도/경도) 일부 예시
 region_coords = {
     '서울특별시': (37.5665, 126.9780),
     '부산광역시': (35.1796, 129.0756),
@@ -27,24 +27,24 @@ region_coords = {
     '제주특별자치도': (33.4996, 126.5312)
 }
 
+# CSV 업로더
 uploaded_file = st.file_uploader("CSV 파일을 업로드해주세요 (EUC-KR 인코딩)", type="csv")
 
 if uploaded_file:
-    # CSV 불러오기
+    # CSV 읽기
     df = pd.read_csv(uploaded_file, encoding='euc-kr')
 
-    # 행정구역/총인구수 열 자동 추출
+    # 컬럼 자동 추출
     region_col = [col for col in df.columns if '행정구역' in col][0]
     total_pop_col = [col for col in df.columns if "총인구수" in col][0]
 
-    # 행정구역명 정리 (괄호 속 숫자 제거)
+    # 괄호 제거: "서울특별시(11)" → "서울특별시"
     df[region_col] = df[region_col].str.replace(r"\(.*\)", "", regex=True).str.strip()
 
-    st.subheader("행정구역별 인구 지도")
-
-    # folium 지도 생성
+    # 지도 생성
     m = folium.Map(location=[36.5, 127.5], zoom_start=7)
 
+    # 행정구역별 원 추가
     for _, row in df.iterrows():
         region = row[region_col]
         pop = pd.to_numeric(row[total_pop_col], errors='coerce')
@@ -59,12 +59,13 @@ if uploaded_file:
                 fill=True,
                 fill_color='pink',
                 fill_opacity=0.5,
-                popup=f"{region}: {int(pop):,}명"
+                popup=f"{region} : {int(pop):,}명"
             ).add_to(m)
 
-    # 지도 출력
+    # 지도 표시
+    st.subheader("행정구역별 인구 시각화 지도")
     st_data = st_folium(m, width=900, height=600)
 
-    st.caption("※ 지도는 행정구역 중심 좌표 기준으로 표시됩니다. 정확한 경계는 반영되지 않습니다.")
+    st.caption("※ 행정구역 중심 좌표 기준으로 원을 표시합니다. 정확한 행정 경계는 포함되지 않습니다.")
 else:
-    st.info("왼쪽 사이드바에서 CSV 파일을 업로드해주세요.")
+    st.info("CSV 파일을 업로드하면 인구 지도가 표시됩니다.")

@@ -54,11 +54,9 @@ if uploaded_file:
             for col in age_only_cols:
                 df_selected[col] = pd.to_numeric(df_selected[col], errors='coerce')
 
-            # 선택한 지역 총인구수 표
             st.subheader("선택한 지역의 총인구수")
             st.dataframe(df_selected[[region_col, total_pop_col]].sort_values(by=total_pop_col, ascending=False))
 
-            # 선택한 지역 연령별 인구 선 그래프
             st.subheader("선택한 지역의 연령별 인구 선 그래프")
             df_plot2 = df_selected[[region_col] + age_only_cols].set_index(region_col).T
             df_plot2.index.name = '연령'
@@ -68,13 +66,12 @@ if uploaded_file:
             df_plot2 = df_plot2.fillna(0)
             st.line_chart(df_plot2)
 
-            # 연령대별 인구 합계 계산 (안전한 숫자 변환)
             age_bins = [0, 9, 19, 29, 39, 49, 59, 69, 79, 89, 99, 150]
-            age_labels_bins = ['10살 미만', '10대', '20대', '30대', '40대', '50대', '60대', '70대', '80대', '90대', '100대 이상']
+            age_labels_bins = ['10살 미만', '10대', '20대', '30대', '40대', '50대',
+                               '60대', '70대', '80대', '90대', '100대 이상']
 
             age_data = df_selected[age_only_cols].copy()
 
-            # 숫자로 변환 가능한 컬럼만 선택
             age_data_cols_int = []
             for col in age_data.columns:
                 try:
@@ -85,7 +82,6 @@ if uploaded_file:
             age_data = age_data[list(map(str, age_data_cols_int))]
             age_data.columns = age_data_cols_int
 
-            # 연령대별 합계 계산
             df_agegroup_sum = pd.DataFrame()
             for idx, row in age_data.iterrows():
                 s = pd.Series(row.values, index=age_data.columns)
@@ -100,10 +96,6 @@ if uploaded_file:
 
         else:
             st.warning("하나 이상의 지역을 선택해주세요.")
-
-else:
-    st.info("왼쪽 사이드바에서 CSV 파일을 업로드해주세요.")
-
 
 else:
     st.info("왼쪽 사이드바에서 CSV 파일을 업로드해주세요.")

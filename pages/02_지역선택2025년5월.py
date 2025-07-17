@@ -67,8 +67,11 @@ if uploaded_file:
         df_plot = df_plot.sort_index()
         df_plot = df_plot.fillna(0)
 
-        st.subheader("총인구수 상위 5개 지역 연령별 인구 선 그래프")
-        st.line_chart(df_plot)
+        # 단위 조절: 인구수 → 만명 단위로
+        df_plot_div = df_plot / 10000
+
+        st.subheader("총인구수 상위 5개 지역 연령별 인구 선 그래프 (단위: 만 명)")
+        st.line_chart(df_plot_div)
 
     with tab2:
         st.subheader("그래프로 보고 싶은 지역을 선택하세요")
@@ -81,9 +84,11 @@ if uploaded_file:
             for col in age_only_cols:
                 df_selected[col] = pd.to_numeric(df_selected[col], errors='coerce')
 
+            # 1. 총인구수 표 (선택한 지역만)
             st.subheader("선택한 지역의 총인구수")
             st.dataframe(df_selected[[region_col, total_pop_col]].sort_values(by=total_pop_col, ascending=False))
 
+            # 2. 연령대별 인구 합계 계산 및 표 (선택한 지역만)
             age_bins = [0, 9, 19, 29, 39, 49, 59, 69, 79, 89, 99, 150]
             age_labels_bins = ['10살 미만', '10대', '20대', '30대', '40대', '50대',
                                '60대', '70대', '80대', '90대', '100대 이상']
@@ -111,14 +116,19 @@ if uploaded_file:
             st.subheader("선택한 지역의 연령대별 인구 합계")
             st.dataframe(df_agegroup_sum)
 
-            st.subheader("선택한 지역의 연령별 인구 선 그래프")
+            # 3. 연령별 인구 선 그래프 (선택한 지역만)
+            st.subheader("선택한 지역의 연령별 인구 선 그래프 (단위: 만 명)")
             df_plot2 = df_selected[[region_col] + age_only_cols].set_index(region_col).T
             df_plot2.index.name = '연령'
             df_plot2 = df_plot2[df_plot2.index.str.match(r'^\d+$')]
             df_plot2.index = df_plot2.index.astype(int)
             df_plot2 = df_plot2.sort_index()
             df_plot2 = df_plot2.fillna(0)
-            st.line_chart(df_plot2)
+
+            # 단위 1만명 단위로 변환
+            df_plot2_div = df_plot2 / 10000
+
+            st.line_chart(df_plot2_div)
 
         else:
             st.warning("하나 이상의 지역을 선택해주세요.")
@@ -152,5 +162,6 @@ if uploaded_file:
 
         else:
             st.info("하나 이상의 지역을 선택해주세요.")
+
 else:
     st.info("왼쪽 사이드바에서 CSV 파일을 업로드해주세요.")

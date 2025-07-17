@@ -41,7 +41,14 @@ if uploaded_file:
 
     # 연령별 인구 데이터만 추출
     age_only_cols = age_labels
-    df_plot = df_top5[[region_col] + age_only_cols].set_index(region_col).T
+    # 연령별 인구만 숫자로 변환
+df_plot = df_top5[[region_col] + age_only_cols].copy()
+for col in age_only_cols:
+    df_plot[col] = pd.to_numeric(df_plot[col], errors='coerce')  # 숫자형으로 변환
+
+# 전치 후 그래프 그리기
+df_plot = df_plot.set_index(region_col).T
+
 
     st.subheader("연령별 인구 선 그래프")
     st.line_chart(df_plot)

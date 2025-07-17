@@ -27,17 +27,15 @@ region_coords = {
     '제주특별자치도': (33.4996, 126.5312)
 }
 
-# CSV 업로더
 uploaded_file = st.file_uploader("CSV 파일을 업로드해주세요 (EUC-KR 인코딩)", type="csv")
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file, encoding='euc-kr')
 
-    # 컬럼 자동 추출
     region_col = [col for col in df.columns if '행정구역' in col][0]
     total_pop_col = [col for col in df.columns if "총인구수" in col][0]
 
-    # 전처리: 괄호 제거 + 시도만 추출
+    # 괄호 제거 및 시·도 추출
     df[region_col] = df[region_col].str.replace(r"\(.*\)", "", regex=True).str.strip()
     df[region_col] = df[region_col].str.extract(r"^(\S+?[시도])")
 
@@ -45,16 +43,13 @@ if uploaded_file:
     df[total_pop_col] = df[total_pop_col].astype(str).str.replace(",", "")
     df[total_pop_col] = pd.to_numeric(df[total_pop_col], errors="coerce")
 
-    # 유효한 지역만 필터
+    # 좌표 있는 지역만 필터링
     df = df[df[region_col].isin(region_coords.keys())]
 
-    # 상위 5개 지역 선택
+    # 상위 5개 지역 추출
     df_top5 = df.sort_values(by=total_pop_col, ascending=False).head(5)
 
-    # 최대 인구수 (원 크기 정규화용)
     max_pop = df_top5[total_pop_col].max()
-
-    # 지도 생성
     m = folium.Map(location=[36.5, 127.5], zoom_start=7)
 
     for _, row in df_top5.iterrows():
@@ -62,15 +57,9 @@ if uploaded_file:
         pop = row[total_pop_col]
         lat, lon = region_coords[region]
 
-        # 원 크기 정규화
         radius = (pop / max_pop) * 30
 
-        # 팝업 내용 구성 (원본 데이터 일부 출력)
-        popup_html = f"<b>{region}</b><br>총인구수: {int(pop):,}명<br><br>"
-        for col in df.columns:
-            if col not in [region_col, total_pop_col]:
-                val = row[col]
-                popup_html += f"{col}: {val}<br>"
+        popup_text = f"{region} 총인구수: {int(pop):,}명"
 
         folium.CircleMarker(
             location=(lat, lon),
@@ -79,13 +68,12 @@ if uploaded_file:
             fill=True,
             fill_color='pink',
             fill_opacity=0.5,
-            popup=folium.Popup(popup_html, max_width=300)
+            popup=popup_text
         ).add_to(m)
 
-    # 지도 출력
     st.subheader("총인구수 상위 5개 행정구역 지도")
-    st_data = st_folium(m, width=900, height=600)
+    st_folium(m, width=900, height=600)
 
-    st.caption("※ 원을 클릭하면 해당 지역의 상세 정보가 나타납니다.")
+    st.caption("※ 원을 클릭하면 해당 지역의 총인구수가 표시됩니다.")
 else:
     st.info("CSV 파일을 업로드하면 지도에 상위 5개 행정구역이 표시됩니다.")
